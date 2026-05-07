@@ -13,11 +13,12 @@ const Product = () => {
   const [showToast, setShowToast] = useState(false);
   
   const navigate = useNavigate();
-  const baseUrl = import.meta.env.VITE_BASE_URL;
+  const baseUrl = import.meta.env.VITE_BASE_URL || "http://localhost:8080";
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
+        // Updated to fetch the specific product by ID instead of the whole list
         const response = await axios.get(`${baseUrl}/api/product/${id}`);
         setProduct(response.data);
         console.log(response.data);
@@ -30,14 +31,21 @@ const Product = () => {
     };
 
     const fetchImage = async () => {
-      const response = await axios.get(
-        `${baseUrl}/api/product/${id}/image`,
-        { responseType: "blob" }
-      );
-      setImageUrl(URL.createObjectURL(response.data));
+      try {
+        const response = await axios.get(
+          `${baseUrl}/api/product/${id}/image`,
+          { responseType: "blob" }
+        );
+        setImageUrl(URL.createObjectURL(response.data));
+      } catch (error) {
+        console.error("Error fetching image:", error);
+      }
     };
-    fetchProduct();
-  }, [id]);
+
+    if (id) {
+      fetchProduct();
+    }
+  }, [id, baseUrl]);
 
   useEffect(() => {
     let toastTimer;
@@ -84,19 +92,18 @@ const Product = () => {
             background-color: transparent; border: 1px solid #111111; z-index: -1;
             transform: translateY(100%); transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
           }
-          .luxury-btn:hover:not(:disabled)::after { transform: translateY(0); }
+          .luxury-btn:hover:not(:disabled):after { transform: translateY(0); }
           .luxury-btn:hover:not(:disabled) { color: #111111 !important; background: transparent !important; }
           .luxury-btn:active:not(:disabled) { transform: scale(0.98); }
         `}
       </style>
 
       {/* ✦ BULLETPROOF LUXURY TOAST NOTIFICATION ✦ */}
-      {/* Hardcoded absolute positioning ensures it can never be hidden or pushed off-screen */}
       <div style={{
         position: "fixed",
-        top: "100px", /* Guaranteed to sit perfectly below the Navbar */
-        right: showToast ? "24px" : "-400px", /* Hardcoded slide-in/slide-out coordinates */
-        zIndex: 9999999, /* Absolute highest layer possible */
+        top: "100px", 
+        right: showToast ? "24px" : "-400px", 
+        zIndex: 9999999, 
         background: "#111111",
         border: "1px solid #333333",
         boxShadow: "0 20px 40px rgba(0,0,0,0.3)",
@@ -174,7 +181,8 @@ const Product = () => {
                 textTransform: "uppercase",
                 letterSpacing: "1.5px"
               }}>
-                {product.category}
+                {/* ✦ FIX: Fallback for Category ✦ */}
+                {product.category || "Uncategorized"}
               </span>
               <span style={{ 
                 fontSize: "11px", 
@@ -229,7 +237,8 @@ const Product = () => {
                 margin: 0,
                 letterSpacing: "0.2px"
               }}>
-                {product.description}
+                {/* ✦ FIX: Fallback for Description ✦ */}
+                {product.description || "No description provided for this product."}
               </p>
             </div>
 
@@ -255,7 +264,8 @@ const Product = () => {
                   Curated
                 </span>
                 <span style={{ fontSize: "14px", fontWeight: "400", color: "#111111", letterSpacing: "0.5px" }}>
-                  {new Date(product.releaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  {/* ✦ FIX: Fallback for Release Date (Prevents "1970" error) ✦ */}
+                  {product.releaseDate ? new Date(product.releaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : "Date Not Available"}
                 </span>
               </div>
             </div>
@@ -271,7 +281,7 @@ const Product = () => {
                 borderRadius: "0px",
                 border: (!product.productAvailable || product.stockQuantity === 0) ? "1px solid #EAEAEA" : "1px solid #111111",
                 background: (!product.productAvailable || product.stockQuantity === 0) ? "#FAFAFA" : "#111111",
-                color: (!product.productAvailable || product.stockQuantity === 0) ? "#999999" : "#FFFFFF",
+                color: (!product.productAvailable || product.stockQuantity === 0) ? "#A1A1A6" : "#FFFFFF",
                 fontSize: "12px",
                 fontWeight: "600",
                 textTransform: "uppercase",

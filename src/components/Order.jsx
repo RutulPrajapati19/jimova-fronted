@@ -1,4 +1,6 @@
-import axios from 'axios';
+import api from '../api'; 
+import 'bootstrap/dist/css/bootstrap.min.css';
+import 'bootstrap-icons/font/bootstrap-icons.css';
 import React, { useEffect, useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -26,9 +28,10 @@ const Order = () => {
       }
 
       try {
-        const response = await axios.get(`${baseUrl}/api/orders`, {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
+        const response = await api.get(`/api/orders`);
+        
+        // ✦ ADDED DEBUG CONSOLE LOG HERE ✦
+        console.log("BACKEND SENT THIS:", response.data);
         
         const fetchedData = response.data;
         const validOrdersArray = Array.isArray(fetchedData) ? fetchedData : 
@@ -62,12 +65,9 @@ const Order = () => {
     const confirmDelete = window.confirm("Are you sure you want to permanently delete all order history from the database?");
     if (!confirmDelete) return;
 
-    const token = localStorage.getItem("token");
     setIsDeleting(true);
     try {
-      await axios.delete(`${baseUrl}/api/orders`, {
-        headers: { "Authorization": `Bearer ${token}` }
-      });
+      await api.delete(`/api/orders`);
       
       setOrders([]); 
       setToastVariant('success');
@@ -189,7 +189,6 @@ return (
                 </tr>
               ) : (
                 orders.map((order) => {
-                  // ✦ FIX: Maps to 'orderItems' directly matching your Order.java ✦
                   const itemsArray = order.orderItems || order.items || order.cartItems || [];
                   const orderKey = order.orderId || order.id || Math.random();
 

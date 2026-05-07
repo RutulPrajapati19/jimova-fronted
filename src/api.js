@@ -4,10 +4,10 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_BASE_URL || 'http://localhost:8080'
 });
 
-// ✦ THE INTERCEPTOR ✦
+// ✦ THE INTERCEPTOR (This guarantees your token is ALWAYS sent) ✦
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token'); // or wherever you saved it in Auth.jsx
+    const token = localStorage.getItem('token'); 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
