@@ -17,6 +17,8 @@ import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-route
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { ToastContainer } from "react-toastify";
+import PaymentSuccess from "./pages/PaymentSuccess";
+
 
 const pingBackend = () => {
   fetch("https://jimova-backend-1.onrender.com/api/products").catch(() => {});
@@ -57,6 +59,7 @@ const Layout = ({ selectedCategory, onSelectCategory }) => {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/order-success" element={<OrderSuccess />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
 
           {/* Legacy routes */}
           <Route path="/add_product" element={<AddProduct />} />

@@ -5,6 +5,7 @@ import { AppProvider } from "./Context/Context.jsx";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 import 'react-toastify/dist/ReactToastify.css';
+import { WishlistProvider } from "./context/WishlistContext";
 
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -13,4 +14,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <App />
     </AppProvider>
   </React.StrictMode>
+
+  
 );
+
+<WishlistProvider>
+  <App />
+</WishlistProvider>
