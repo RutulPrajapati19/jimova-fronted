@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -43,9 +43,10 @@ const AdminLogin = () => {
       localStorage.setItem("userRole", role);
       localStorage.setItem("userEmail", email);
       localStorage.setItem("userName", name || email.split("@")[0]);
-      window.dispatchEvent(new Event("storage"));
+      
       toast.success("Welcome back, Admin.");
-      setTimeout(() => navigate("/admin"), 1200);
+      window.dispatchEvent(new Event("storage"));
+      setTimeout(() => navigate("/admin", { replace: true }), 800);
     } catch (err) {
       toast.error(err.response?.data?.message || "Invalid credentials");
     } finally {
@@ -395,6 +396,20 @@ const AdminLogin = () => {
             </form>
 
             <div className="al-card-footer">
+              <Link
+                to="/forgot-password"
+                style={{
+                  display: "block",
+                  fontSize: "10px", fontWeight: "600",
+                  letterSpacing: "1px", textTransform: "uppercase",
+                  color: "#C5A059", textDecoration: "none",
+                  marginBottom: "14px", transition: "color 0.2s",
+                }}
+                onMouseEnter={e => e.currentTarget.style.color = "#111111"}
+                onMouseLeave={e => e.currentTarget.style.color = "#C5A059"}
+              >
+                Forgot Password?
+              </Link>
               <button className="al-back" onClick={() => navigate("/")}>
                 ← Return to Store
               </button>

@@ -13,27 +13,39 @@ import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 import AdminPanel from "./components/AdminPanel";
 import AdminLogin from "./components/AdminLogin";
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { ToastContainer } from "react-toastify";
 import PaymentSuccess from "./pages/PaymentSuccess";
 
-
 const pingBackend = () => {
   fetch("https://jimova-backend-1.onrender.com/api/products").catch(() => {});
 };
 
+// Reactive hook — re-reads localStorage whenever storage event fires
+const useUserRole = () => {
+  const [role, setRole] = useState(() => localStorage.getItem("userRole"));
+
+  useEffect(() => {
+    const sync = () => setRole(localStorage.getItem("userRole"));
+    window.addEventListener("storage", sync);
+    return () => window.removeEventListener("storage", sync);
+  }, []);
+
+  return role;
+};
+
 // Protects /admin — redirects to /admin/login if not ADMIN
 const AdminRoute = ({ children }) => {
-  const role = localStorage.getItem("userRole");
+  const role = useUserRole();
   if (role !== "ADMIN") return <Navigate to="/admin/login" replace />;
   return children;
 };
 
-// If already logged in as ADMIN, skip /admin/login and go straight to /admin
+// If already logged in as ADMIN, skip /admin/login
 const AdminLoginRoute = ({ children }) => {
-  const role = localStorage.getItem("userRole");
+  const role = useUserRole();
   if (role === "ADMIN") return <Navigate to="/admin" replace />;
   return children;
 };
@@ -44,9 +56,7 @@ const Layout = ({ selectedCategory, onSelectCategory }) => {
 
   return (
     <>
-      {/* Hide main Navbar on all /admin routes */}
       {!isAdmin && <Navbar onSelectCategory={onSelectCategory} />}
-
       <div className={isAdmin ? "" : "min-vh-100 bg-light"}>
         <Routes>
           {/* ── Public routes ── */}
