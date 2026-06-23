@@ -1,17 +1,13 @@
 import React, { useState } from "react";
 import axios from "axios";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { toast, ToastContainer } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-  });
-
+  const [formData, setFormData] = useState({ name: "", email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const baseUrl = import.meta.env.VITE_BASE_URL || "http://localhost:8080";
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
@@ -20,27 +16,22 @@ const Auth = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    if (errors[name]) {
-      setErrors({ ...errors, [name]: null });
-    }
+    if (errors[name]) setErrors({ ...errors, [name]: null });
   };
 
   const validateForm = () => {
     const newErrors = {};
     if (!isLogin && !formData.name.trim()) newErrors.name = "Full name is required";
-
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Email address is invalid";
     }
-
     if (!formData.password) {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
     }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -48,71 +39,38 @@ const Auth = () => {
   const submitHandler = async (event) => {
     event.preventDefault();
     if (!validateForm()) return;
-
     setLoading(true);
     const endpoint = isLogin ? "/api/auth/login" : "/api/auth/register";
-
-    console.log("🔵 Sending request to:", `${baseUrl}${endpoint}`);
-    console.log("🔵 Form data:", { email: formData.email, password: "***" });
-
     try {
       const response = await axios.post(`${baseUrl}${endpoint}`, formData, {
         headers: { "Content-Type": "application/json" },
       });
-
-      // ✦ DEBUG: Log full response so we can see the token field name ✦
-      console.log("✅ Full response.data:", response.data);
-      console.log("✅ All keys in response:", Object.keys(response.data));
-
-      // ✦ FIX: Try all common token field names ✦
       const token =
-        response.data.token ||
-        response.data.jwt ||
-        response.data.accessToken ||
-        response.data.jwtToken ||
-        response.data.access_token ||
-        response.data.authToken ||
-        null;
-
-      console.log("✅ Extracted token:", token ? "FOUND ✓" : "NOT FOUND ✗");
-
+        response.data.token || response.data.jwt || response.data.accessToken ||
+        response.data.jwtToken || response.data.access_token || response.data.authToken || null;
       if (!token) {
-        console.error("❌ Could not find token in response. Keys were:", Object.keys(response.data));
-        toast.error("Login succeeded but no token received. Check console for details.");
+        toast.error("Login succeeded but no token received.");
         setLoading(false);
         return;
       }
-
       localStorage.setItem("token", token);
       localStorage.setItem("userEmail", formData.email);
       localStorage.setItem("userRole", response.data.role);
-
       const nameToSave = !isLogin
         ? formData.name
         : response.data.name || response.data.username || formData.email.split('@')[0];
       localStorage.setItem("userName", nameToSave);
-
-      console.log("✅ Token saved to localStorage:", token.substring(0, 20) + "...");
-
       toast.success(isLogin ? "Welcome back!" : "Account created successfully!");
       window.dispatchEvent(new Event("storage"));
-
-      setTimeout(() => {
-        navigate("/");
-      }, 1500);
-
+      setTimeout(() => navigate("/"), 1500);
     } catch (error) {
-      console.error("❌ Auth Error:", error);
-      console.error("❌ Error response:", error.response?.data);
-      console.error("❌ Status:", error.response?.status);
-
-      if (error.response && error.response.data) {
+      if (error.response?.data) {
         toast.error(error.response.data.message || "Authentication failed");
         setErrors(error.response.data.errors || {});
       } else if (error.code === "ERR_NETWORK" || !error.response) {
-        toast.error("Cannot reach server. Is your backend running at " + baseUrl + "?");
+        toast.error("Cannot reach server. Is your backend running?");
       } else {
-        toast.error("Network error. Please check your backend connection.");
+        toast.error("Network error. Please check your connection.");
       }
     } finally {
       setLoading(false);
@@ -123,117 +81,315 @@ const Auth = () => {
     setIsLogin(!isLogin);
     setErrors({});
     setFormData({ name: "", email: "", password: "" });
+    setShowPassword(false);
   };
 
   return (
     <>
-      <style>
-        {`
-          @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,800;1,400&display=swap');
-          .luxury-serif { font-family: 'Playfair Display', serif; }
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap');
+        *, *::before, *::after { box-sizing: border-box; }
 
-          .luxury-input { transition: all 0.4s ease; }
-          .luxury-input:focus { border-color: #111111 !important; box-shadow: 0 4px 12px rgba(0,0,0,0.03); background: #FFFFFF !important; }
+        .auth-root {
+          min-height: 100vh;
+          background: #FCFCFC;
+          display: flex; align-items: center; justify-content: center;
+          padding: 60px 20px;
+          font-family: 'Inter', sans-serif;
+          position: relative;
+        }
+        .auth-root::before {
+          content: '';
+          position: fixed; inset: 0;
+          background-image:
+            linear-gradient(#EBEBEB 1px, transparent 1px),
+            linear-gradient(90deg, #EBEBEB 1px, transparent 1px);
+          background-size: 48px 48px;
+          opacity: 0.35; pointer-events: none; z-index: 0;
+        }
 
-          .luxury-btn { transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1); position: relative; z-index: 1; overflow: hidden; }
-          .luxury-btn::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; background-color: transparent; border: 1px solid #111111; z-index: -1; transform: translateY(100%); transition: transform 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
-          .luxury-btn:hover:not(:disabled)::after { transform: translateY(0); }
-          .luxury-btn:hover:not(:disabled) { color: #111111 !important; background: transparent !important; }
-          .luxury-btn:active:not(:disabled) { transform: scale(0.98); }
-        `}
-      </style>
+        .auth-wrap { width: 100%; max-width: 460px; position: relative; z-index: 1; }
 
-      <div style={{
-        padding: "100px 6% 120px",
-        background: "#FCFCFC",
-        minHeight: "100vh",
-        fontFamily: "'Inter', -apple-system, sans-serif",
-        display: "flex",
-        alignItems: "center"
-      }}>
-        <div className="container">
-          <div className="row justify-content-center">
-            <div className="col-lg-5 col-md-8">
+        /* brand */
+        .auth-brand {
+          text-align: center; margin-bottom: 40px;
+        }
+        .auth-logo {
+          font-family: 'Playfair Display', serif;
+          font-size: 30px; font-weight: 400;
+          letter-spacing: -0.5px; color: #111111;
+          cursor: pointer; display: inline-block;
+          margin-bottom: 20px; transition: opacity 0.2s;
+          text-decoration: none;
+        }
+        .auth-logo:hover { opacity: 0.7; }
+        .auth-logo em { color: #C5A059; font-style: italic; }
 
-              <div style={{ marginBottom: "48px", textAlign: "center" }}>
-                <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
-                  <span style={{ width: "16px", height: "1px", background: "#C5A059" }}></span>
-                  <span style={{ fontSize: "10px", fontWeight: "600", color: "#C5A059", letterSpacing: "2px", textTransform: "uppercase" }}>
-                    {isLogin ? "Authentication" : "Membership"}
-                  </span>
-                  <span style={{ width: "16px", height: "1px", background: "#C5A059" }}></span>
+        .auth-eyebrow {
+          display: flex; align-items: center; justify-content: center;
+          gap: 10px; margin-bottom: 14px;
+        }
+        .auth-eyebrow-line { width: 20px; height: 1px; background: #C5A059; }
+        .auth-eyebrow-text {
+          font-size: 9px; font-weight: 700;
+          letter-spacing: 3px; text-transform: uppercase; color: #C5A059;
+        }
+
+        .auth-title {
+          font-family: 'Playfair Display', serif;
+          font-size: 36px; font-weight: 400;
+          color: #111111; margin: 0 0 10px;
+          letter-spacing: -0.5px; line-height: 1.1;
+        }
+        .auth-title em { color: #C5A059; font-style: italic; }
+
+        .auth-sub {
+          font-size: 13px; font-weight: 300;
+          color: #888888; margin: 0; line-height: 1.6;
+        }
+
+        /* card */
+        .auth-card {
+          background: #FFFFFF; border: 1px solid #EBEBEB;
+          padding: 48px 44px;
+          box-shadow: 0 24px 48px rgba(0,0,0,0.04);
+          position: relative; overflow: hidden;
+        }
+        .auth-card::before {
+          content: '';
+          position: absolute; top: 0; left: 10%; right: 10%;
+          height: 1px;
+          background: linear-gradient(90deg, transparent, #C5A059, transparent);
+        }
+
+        /* fields */
+        .auth-label {
+          display: block; font-size: 9px; font-weight: 700;
+          letter-spacing: 2px; text-transform: uppercase;
+          color: #AAAAAA; margin-bottom: 10px;
+        }
+
+        .auth-label-row {
+          display: flex; justify-content: space-between; align-items: baseline;
+          margin-bottom: 10px;
+        }
+
+        .auth-forgot {
+          font-size: 10px; font-weight: 600;
+          color: #C5A059; text-decoration: none;
+          letter-spacing: 0.5px;
+          transition: color 0.2s;
+        }
+        .auth-forgot:hover { color: #111111; }
+
+        .auth-field { margin-bottom: 20px; }
+        .auth-field:last-of-type { margin-bottom: 0; }
+
+        .auth-input-wrap { position: relative; }
+
+        .auth-input {
+          width: 100%; padding: 15px 16px;
+          border: 1px solid #EBEBEB; background: #FAFAFA;
+          font-family: 'Inter', sans-serif; font-size: 14px; color: #111111;
+          outline: none; transition: border-color 0.25s, background 0.25s;
+          letter-spacing: 0.3px;
+        }
+        .auth-input:focus { border-color: #C5A059; background: #FFFFFF; }
+        .auth-input.error { border-color: #D32F2F; }
+        .auth-input.password { padding-right: 48px; letter-spacing: 2px; }
+        .auth-input.password::placeholder { letter-spacing: 0; }
+
+        .auth-eye {
+          position: absolute; right: 14px; top: 50%;
+          transform: translateY(-50%);
+          background: none; border: none; cursor: pointer;
+          color: #CCCCCC; display: flex; align-items: center;
+          padding: 4px; transition: color 0.2s;
+        }
+        .auth-eye:hover { color: #888888; }
+
+        .auth-error {
+          color: #D32F2F; font-size: 11px;
+          margin-top: 6px; font-weight: 500;
+          display: flex; align-items: center; gap: 5px;
+        }
+
+        /* submit */
+        .auth-btn {
+          width: 100%; padding: 16px 24px;
+          background: #111111; color: #FFFFFF;
+          border: 1px solid #111111;
+          font-family: 'Inter', sans-serif;
+          font-size: 11px; font-weight: 700;
+          letter-spacing: 2px; text-transform: uppercase;
+          cursor: pointer; margin-top: 32px;
+          transition: all 0.35s ease;
+          position: relative; overflow: hidden;
+        }
+        .auth-btn::after {
+          content: ''; position: absolute; inset: 0;
+          background: #C5A059; transform: scaleX(0); transform-origin: left;
+          transition: transform 0.35s cubic-bezier(0.25,1,0.5,1); z-index: 0;
+        }
+        .auth-btn:hover:not(:disabled)::after { transform: scaleX(1); }
+        .auth-btn:hover:not(:disabled) { color: #111111; border-color: #C5A059; }
+        .auth-btn span { position: relative; z-index: 1; }
+        .auth-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .auth-spinner {
+          display: inline-block; width: 11px; height: 11px;
+          border: 1px solid rgba(255,255,255,0.4); border-top-color: #fff;
+          border-radius: 50%; animation: auth-spin 0.8s linear infinite;
+          margin-right: 8px; vertical-align: middle;
+        }
+        @keyframes auth-spin { to { transform: rotate(360deg); } }
+
+        /* footer */
+        .auth-card-footer {
+          border-top: 1px solid #EBEBEB;
+          margin-top: 28px; padding-top: 24px;
+          text-align: center;
+        }
+        .auth-card-footer p {
+          font-size: 12px; color: #888888; margin: 0; font-weight: 400;
+        }
+        .auth-toggle {
+          color: #111111; font-weight: 700;
+          cursor: pointer; text-transform: uppercase;
+          letter-spacing: 1px; font-size: 11px;
+          margin-left: 6px;
+          border-bottom: 1px solid #111111;
+          padding-bottom: 1px;
+          transition: color 0.2s, border-color 0.2s;
+        }
+        .auth-toggle:hover { color: #C5A059; border-color: #C5A059; }
+
+        @media (max-width: 480px) {
+          .auth-card { padding: 36px 24px; }
+          .auth-title { font-size: 28px; }
+        }
+      `}</style>
+
+      <div className="auth-root">
+        <div className="auth-wrap">
+
+          {/* Brand */}
+          <div className="auth-brand">
+            <div className="auth-logo" onClick={() => navigate("/")}>
+              Jimova<em>.</em>
+            </div>
+            <div className="auth-eyebrow">
+              <span className="auth-eyebrow-line" />
+              <span className="auth-eyebrow-text">{isLogin ? "Authentication" : "Membership"}</span>
+              <span className="auth-eyebrow-line" />
+            </div>
+            <h1 className="auth-title">
+              {isLogin ? "Welcome Back" : "Create Account"}<em>.</em>
+            </h1>
+            <p className="auth-sub">
+              {isLogin
+                ? "Enter your details to access your curated collection."
+                : "Join us to discover the absolute modern standard of luxury."}
+            </p>
+          </div>
+
+          {/* Card */}
+          <div className="auth-card">
+            <form noValidate onSubmit={submitHandler}>
+
+              {/* Name (register only) */}
+              {!isLogin && (
+                <div className="auth-field">
+                  <label className="auth-label">Full Name</label>
+                  <input
+                    className={`auth-input${errors.name ? " error" : ""}`}
+                    type="text" name="name"
+                    placeholder="John Doe"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    autoComplete="name"
+                  />
+                  {errors.name && <div className="auth-error">{errors.name}</div>}
                 </div>
+              )}
 
-                <h1 className="luxury-serif" style={{ fontSize: "44px", fontWeight: "400", letterSpacing: "-0.5px", color: "#111111", margin: 0, lineHeight: "1.1" }}>
-                  {isLogin ? "Welcome Back" : "Create Account"}<span style={{ color: "#C5A059", fontStyle: "italic" }}>.</span>
-                </h1>
-                <p style={{ marginTop: "16px", color: "#666666", fontSize: "14px", fontWeight: "400", letterSpacing: "0.5px", margin: 0 }}>
-                  {isLogin ? "Enter your details to access your curated collection." : "Join us to discover the absolute modern standard of luxury."}
-                </p>
+              {/* Email */}
+              <div className="auth-field">
+                <label className="auth-label">Email Address</label>
+                <input
+                  className={`auth-input${errors.email ? " error" : ""}`}
+                  type="email" name="email"
+                  placeholder="name@example.com"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  autoComplete="email"
+                />
+                {errors.email && <div className="auth-error">{errors.email}</div>}
               </div>
 
-              <div style={{ background: "#FFFFFF", borderRadius: "0px", padding: "48px 40px", border: "1px solid #EAEAEA", boxShadow: "0 20px 40px rgba(0,0,0,0.03)" }}>
-                <form className="row g-4" noValidate onSubmit={submitHandler}>
-                  {!isLogin && (
-                    <div className="col-12">
-                      <label style={{ fontSize: "10px", fontWeight: "600", color: "#999999", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: "12px", display: "block" }}>Full Name</label>
-                      <input type="text" name="name" className="luxury-input" placeholder="John Doe" value={formData.name} onChange={handleInputChange}
-                        style={{ width: "100%", padding: "16px", borderRadius: "0px", border: `1px solid ${errors.name ? '#D32F2F' : '#EAEAEA'}`, background: "#FAFAFA", fontSize: "14px", color: "#111111", outline: "none" }} />
-                      {errors.name && <div style={{ color: "#D32F2F", fontSize: "11px", marginTop: "8px", fontWeight: "500", letterSpacing: "0.5px" }}>{errors.name}</div>}
-                    </div>
+              {/* Password */}
+              <div className="auth-field">
+                <div className="auth-label-row">
+                  <label className="auth-label" style={{ margin: 0 }}>Password</label>
+                  {isLogin && (
+                    <Link to="/forgot-password" className="auth-forgot">
+                      Forgot Password?
+                    </Link>
                   )}
-
-                  <div className="col-12">
-                    <label style={{ fontSize: "10px", fontWeight: "600", color: "#999999", textTransform: "uppercase", letterSpacing: "1.5px", marginBottom: "12px", display: "block" }}>Email Address</label>
-                    <input type="email" name="email" className="luxury-input" placeholder="name@example.com" value={formData.email} onChange={handleInputChange}
-                      style={{ width: "100%", padding: "16px", borderRadius: "0px", border: `1px solid ${errors.email ? '#D32F2F' : '#EAEAEA'}`, background: "#FAFAFA", fontSize: "14px", color: "#111111", outline: "none" }} />
-                    {errors.email && <div style={{ color: "#D32F2F", fontSize: "11px", marginTop: "8px", fontWeight: "500", letterSpacing: "0.5px" }}>{errors.email}</div>}
-                  </div>
-
-                  <div className="col-12">
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "12px" }}>
-                      <label style={{ fontSize: "10px", fontWeight: "600", color: "#999999", textTransform: "uppercase", letterSpacing: "1.5px", margin: 0, display: "block" }}>Password</label>
-                      {isLogin && (
-                        <span style={{ fontSize: "11px", fontWeight: "600", color: "#C5A059", cursor: "pointer", transition: "color 0.3s ease" }}
-                          onMouseEnter={(e) => e.target.style.color = "#111111"}
-                          onMouseLeave={(e) => e.target.style.color = "#C5A059"}>
-                          Forgot Password?
-                        </span>
-                      )}
-                    </div>
-                    <input type="password" name="password" className="luxury-input" placeholder="••••••••" value={formData.password} onChange={handleInputChange}
-                      style={{ width: "100%", padding: "16px", borderRadius: "0px", border: `1px solid ${errors.password ? '#D32F2F' : '#EAEAEA'}`, background: "#FAFAFA", fontSize: "14px", color: "#111111", outline: "none", letterSpacing: "2px" }} />
-                    {errors.password && <div style={{ color: "#D32F2F", fontSize: "11px", marginTop: "8px", fontWeight: "500", letterSpacing: "0.5px" }}>{errors.password}</div>}
-                  </div>
-
-                  <div className="col-12" style={{ marginTop: "40px" }}>
-                    {loading ? (
-                      <button type="button" disabled style={{ width: "100%", padding: "18px", borderRadius: "0px", border: "1px solid #EAEAEA", background: "#FAFAFA", color: "#999999", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1.5px", display: "flex", alignItems: "center", justifyContent: "center", gap: "12px" }}>
-                        <span className="spinner-border spinner-border-sm" role="status" aria-hidden="true" style={{ width: "14px", height: "14px" }}></span>
-                        Authenticating...
-                      </button>
-                    ) : (
-                      <button type="submit" className="luxury-btn" style={{ width: "100%", padding: "18px", borderRadius: "0px", border: "1px solid #111111", background: "#111111", color: "#FFFFFF", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "1.5px", cursor: "pointer" }}>
-                        {isLogin ? "Sign In" : "Create Account"}
-                      </button>
-                    )}
-                  </div>
-                </form>
-
-                <div style={{ textAlign: "center", marginTop: "32px", paddingTop: "32px", borderTop: "1px solid #EAEAEA" }}>
-                  <p style={{ fontSize: "12px", color: "#888888", margin: 0, fontWeight: "500", letterSpacing: "0.5px" }}>
-                    {isLogin ? "Don't have an account?" : "Already have an account?"}{" "}
-                    <span onClick={toggleAuthMode}
-                      style={{ color: "#111111", fontWeight: "600", cursor: "pointer", textTransform: "uppercase", letterSpacing: "1px", marginLeft: "4px", borderBottom: "1px solid #111111", paddingBottom: "2px", transition: "all 0.3s ease" }}
-                      onMouseEnter={(e) => { e.target.style.color = "#C5A059"; e.target.style.borderColor = "#C5A059"; }}
-                      onMouseLeave={(e) => { e.target.style.color = "#111111"; e.target.style.borderColor = "#111111"; }}>
-                      {isLogin ? "Sign Up" : "Log In"}
-                    </span>
-                  </p>
                 </div>
+                <div className="auth-input-wrap">
+                  <input
+                    className={`auth-input password${errors.password ? " error" : ""}`}
+                    type={showPassword ? "text" : "password"}
+                    name="password"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    autoComplete={isLogin ? "current-password" : "new-password"}
+                  />
+                  <button
+                    type="button" className="auth-eye"
+                    onClick={() => setShowPassword((p) => !p)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94"/>
+                        <path d="M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19"/>
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                      </svg>
+                    ) : (
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                        <circle cx="12" cy="12" r="3"/>
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {errors.password && <div className="auth-error">{errors.password}</div>}
               </div>
+
+              {/* Submit */}
+              <button className="auth-btn" type="submit" disabled={loading}>
+                <span>
+                  {loading && <span className="auth-spinner" />}
+                  {loading ? "Authenticating..." : isLogin ? "Sign In" : "Create Account"}
+                </span>
+              </button>
+            </form>
+
+            <div className="auth-card-footer">
+              <p>
+                {isLogin ? "Don't have an account?" : "Already have an account?"}
+                <span className="auth-toggle" onClick={toggleAuthMode}>
+                  {isLogin ? "Sign Up" : "Log In"}
+                </span>
+              </p>
             </div>
           </div>
+
         </div>
       </div>
 
