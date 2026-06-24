@@ -13,7 +13,7 @@ import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 import AdminPanel from "./components/AdminPanel";
 import AdminLogin from "./components/AdminLogin";
-import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap/dist/js/bootstrap.bundle.min.js";
 import { ToastContainer } from "react-toastify";
@@ -23,29 +23,14 @@ const pingBackend = () => {
   fetch("https://jimova-backend-1.onrender.com/api/products").catch(() => {});
 };
 
-// Reactive hook — re-reads localStorage whenever storage event fires
-const useUserRole = () => {
-  const [role, setRole] = useState(() => localStorage.getItem("userRole"));
-
-  useEffect(() => {
-    const sync = () => setRole(localStorage.getItem("userRole"));
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, []);
-
-  return role;
-};
-
-// Protects /admin — redirects to /admin/login if not ADMIN
 const AdminRoute = ({ children }) => {
-  const role = useUserRole();
+  const role = localStorage.getItem("userRole");
   if (role !== "ADMIN") return <Navigate to="/admin/login" replace />;
   return children;
 };
 
-// If already logged in as ADMIN, skip /admin/login
 const AdminLoginRoute = ({ children }) => {
-  const role = useUserRole();
+  const role = localStorage.getItem("userRole");
   if (role === "ADMIN") return <Navigate to="/admin" replace />;
   return children;
 };
@@ -59,7 +44,6 @@ const Layout = ({ selectedCategory, onSelectCategory }) => {
       {!isAdmin && <Navbar onSelectCategory={onSelectCategory} />}
       <div className={isAdmin ? "" : "min-vh-100 bg-light"}>
         <Routes>
-          {/* ── Public routes ── */}
           <Route path="/" element={<Home selectedCategory={selectedCategory} />} />
           <Route path="/product/:id" element={<Product />} />
           <Route path="/cart" element={<Cart />} />
@@ -70,28 +54,10 @@ const Layout = ({ selectedCategory, onSelectCategory }) => {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/order-success" element={<OrderSuccess />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
-
-          {/* Legacy routes */}
           <Route path="/add_product" element={<AddProduct />} />
           <Route path="/product/update/:id" element={<UpdateProduct />} />
-
-          {/* ── Admin routes ── */}
-          <Route
-            path="/admin/login"
-            element={
-              <AdminLoginRoute>
-                <AdminLogin />
-              </AdminLoginRoute>
-            }
-          />
-          <Route
-            path="/admin"
-            element={
-              <AdminRoute>
-                <AdminPanel />
-              </AdminRoute>
-            }
-          />
+          <Route path="/admin/login" element={<AdminLoginRoute><AdminLogin /></AdminLoginRoute>} />
+          <Route path="/admin" element={<AdminRoute><AdminPanel /></AdminRoute>} />
         </Routes>
       </div>
     </>
@@ -101,9 +67,7 @@ const Layout = ({ selectedCategory, onSelectCategory }) => {
 function App() {
   const [selectedCategory, setSelectedCategory] = useState("");
 
-  useEffect(() => {
-    pingBackend();
-  }, []);
+  useEffect(() => { pingBackend(); }, []);
 
   return (
     <BrowserRouter>
